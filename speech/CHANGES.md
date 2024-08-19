@@ -1,5 +1,86 @@
 # Changes
 
+## [1.24.1](https://github.com/googleapis/google-cloud-go/compare/speech/v1.24.0...speech/v1.24.1) (2024-08-08)
+
+
+### Bug Fixes
+
+* **speech:** Update google.golang.org/api to v0.191.0 ([5b32644](https://github.com/googleapis/google-cloud-go/commit/5b32644eb82eb6bd6021f80b4fad471c60fb9d73))
+
+## [1.24.0](https://github.com/googleapis/google-cloud-go/compare/speech/v1.23.4...speech/v1.24.0) (2024-07-24)
+
+
+### Features
+
+* **speech:** Add locations metadata proto file ([1bb4c84](https://github.com/googleapis/google-cloud-go/commit/1bb4c846ec1ff37f394afb1684823ea76c18d16e))
+
+
+### Bug Fixes
+
+* **speech:** Update dependencies ([257c40b](https://github.com/googleapis/google-cloud-go/commit/257c40bd6d7e59730017cf32bda8823d7a232758))
+
+
+### Documentation
+
+* **speech:** Update the list of automatically detected encodings ([1bb4c84](https://github.com/googleapis/google-cloud-go/commit/1bb4c846ec1ff37f394afb1684823ea76c18d16e))
+* **speech:** Update the maximum number of files that may be included in a BatchRecognizeRequest ([1bb4c84](https://github.com/googleapis/google-cloud-go/commit/1bb4c846ec1ff37f394afb1684823ea76c18d16e))
+
+## [1.23.4](https://github.com/googleapis/google-cloud-go/compare/speech/v1.23.3...speech/v1.23.4) (2024-07-10)
+
+
+### Bug Fixes
+
+* **speech:** Bump google.golang.org/grpc@v1.64.1 ([8ecc4e9](https://github.com/googleapis/google-cloud-go/commit/8ecc4e9622e5bbe9b90384d5848ab816027226c5))
+
+## [1.23.3](https://github.com/googleapis/google-cloud-go/compare/speech/v1.23.2...speech/v1.23.3) (2024-07-01)
+
+
+### Bug Fixes
+
+* **speech:** Bump google.golang.org/api@v0.187.0 ([8fa9e39](https://github.com/googleapis/google-cloud-go/commit/8fa9e398e512fd8533fd49060371e61b5725a85b))
+
+## [1.23.2](https://github.com/googleapis/google-cloud-go/compare/speech/v1.23.1...speech/v1.23.2) (2024-06-26)
+
+
+### Bug Fixes
+
+* **speech:** Enable new auth lib ([b95805f](https://github.com/googleapis/google-cloud-go/commit/b95805f4c87d3e8d10ea23bd7a2d68d7a4157568))
+
+## [1.23.1](https://github.com/googleapis/google-cloud-go/compare/speech/v1.23.0...speech/v1.23.1) (2024-05-01)
+
+
+### Bug Fixes
+
+* **speech:** Bump x/net to v0.24.0 ([ba31ed5](https://github.com/googleapis/google-cloud-go/commit/ba31ed5fda2c9664f2e1cf972469295e63deb5b4))
+
+## [1.23.0](https://github.com/googleapis/google-cloud-go/compare/speech/v1.22.1...speech/v1.23.0) (2024-04-04)
+
+
+### Features
+
+* **speech:** Add `translation_config` in `RecognitionConfig` message ([#9699](https://github.com/googleapis/google-cloud-go/issues/9699)) ([dbcdfd7](https://github.com/googleapis/google-cloud-go/commit/dbcdfd7843be16573b1683466852242a84891456))
+
+## [1.22.1](https://github.com/googleapis/google-cloud-go/compare/speech/v1.22.0...speech/v1.22.1) (2024-03-14)
+
+
+### Bug Fixes
+
+* **speech:** Update protobuf dep to v1.33.0 ([30b038d](https://github.com/googleapis/google-cloud-go/commit/30b038d8cac0b8cd5dd4761c87f3f298760dd33a))
+
+## [1.22.0](https://github.com/googleapis/google-cloud-go/compare/speech/v1.21.1...speech/v1.22.0) (2024-02-26)
+
+
+### Features
+
+* **speech:** Add API for writing BatchRecognize transcripts in SRT and VTT formats ([3814ee3](https://github.com/googleapis/google-cloud-go/commit/3814ee3f27724ad0d02688ad86030b83e0a72fd4))
+
+## [1.21.1](https://github.com/googleapis/google-cloud-go/compare/speech/v1.21.0...speech/v1.21.1) (2024-01-30)
+
+
+### Bug Fixes
+
+* **speech:** Enable universe domain resolution options ([fd1d569](https://github.com/googleapis/google-cloud-go/commit/fd1d56930fa8a747be35a224611f4797b8aeb698))
+
 ## [1.21.0](https://github.com/googleapis/google-cloud-go/compare/speech/v1.20.1...speech/v1.21.0) (2023-11-09)
 
 

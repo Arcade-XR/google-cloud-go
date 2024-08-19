@@ -22,11 +22,11 @@ import (
 	"time"
 
 	"cloud.google.com/go/internal/testutil"
-	"github.com/apache/arrow/go/v12/arrow"
-	"github.com/apache/arrow/go/v12/arrow/array"
-	"github.com/apache/arrow/go/v12/arrow/ipc"
-	"github.com/apache/arrow/go/v12/arrow/math"
-	"github.com/apache/arrow/go/v12/arrow/memory"
+	"github.com/apache/arrow/go/v15/arrow"
+	"github.com/apache/arrow/go/v15/arrow/array"
+	"github.com/apache/arrow/go/v15/arrow/ipc"
+	"github.com/apache/arrow/go/v15/arrow/math"
+	"github.com/apache/arrow/go/v15/arrow/memory"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/api/iterator"
 )
@@ -40,20 +40,22 @@ func TestIntegration_StorageReadBasicTypes(t *testing.T) {
 	initQueryParameterTestCases()
 
 	for _, c := range queryParameterTestCases {
-		q := storageOptimizedClient.Query(c.query)
-		q.Parameters = c.parameters
-		q.forceStorageAPI = true
-		it, err := q.Read(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = checkIteratorRead(it, c.wantRow)
-		if err != nil {
-			t.Fatalf("%s: error on query `%s`[%v]: %v", it.SourceJob().ID(), c.query, c.parameters, err)
-		}
-		if !it.IsAccelerated() {
-			t.Fatalf("%s: expected storage api to be used", it.SourceJob().ID())
-		}
+		t.Run(c.name, func(t *testing.T) {
+			q := storageOptimizedClient.Query(c.query)
+			q.Parameters = c.parameters
+			q.forceStorageAPI = true
+			it, err := q.Read(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = checkIteratorRead(it, c.wantRow)
+			if err != nil {
+				t.Fatalf("%s: error on query `%s`[%v]: %v", it.SourceJob().ID(), c.query, c.parameters, err)
+			}
+			if !it.IsAccelerated() {
+				t.Fatalf("%s: expected storage api to be used", it.SourceJob().ID())
+			}
+		})
 	}
 }
 
@@ -255,7 +257,7 @@ func TestIntegration_StorageReadQueryOrdering(t *testing.T) {
 		}
 		total++ // as we read the first value separately
 
-		session := it.arrowIterator.(*storageArrowIterator).session
+		session := it.arrowIterator.(*storageArrowIterator).rs
 		bqSession := session.bqSession
 		if len(bqSession.Streams) == 0 {
 			t.Fatalf("%s: expected to use at least one stream but found %d", tc.name, len(bqSession.Streams))
@@ -323,7 +325,7 @@ func TestIntegration_StorageReadQueryStruct(t *testing.T) {
 		total++
 	}
 
-	bqSession := it.arrowIterator.(*storageArrowIterator).session.bqSession
+	bqSession := it.arrowIterator.(*storageArrowIterator).rs.bqSession
 	if len(bqSession.Streams) == 0 {
 		t.Fatalf("should use more than one stream but found %d", len(bqSession.Streams))
 	}
@@ -372,7 +374,7 @@ func TestIntegration_StorageReadQueryMorePages(t *testing.T) {
 	}
 	total++ // as we read the first value separately
 
-	bqSession := it.arrowIterator.(*storageArrowIterator).session.bqSession
+	bqSession := it.arrowIterator.(*storageArrowIterator).rs.bqSession
 	if len(bqSession.Streams) == 0 {
 		t.Fatalf("should use more than one stream but found %d", len(bqSession.Streams))
 	}

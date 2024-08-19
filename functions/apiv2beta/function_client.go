@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,10 +66,13 @@ type FunctionCallOptions struct {
 func defaultFunctionGRPCClientOptions() []option.ClientOption {
 	return []option.ClientOption{
 		internaloption.WithDefaultEndpoint("cloudfunctions.googleapis.com:443"),
+		internaloption.WithDefaultEndpointTemplate("cloudfunctions.UNIVERSE_DOMAIN:443"),
 		internaloption.WithDefaultMTLSEndpoint("cloudfunctions.mtls.googleapis.com:443"),
+		internaloption.WithDefaultUniverseDomain("googleapis.com"),
 		internaloption.WithDefaultAudience("https://cloudfunctions.googleapis.com/"),
 		internaloption.WithDefaultScopes(DefaultAuthScopes()...),
 		internaloption.EnableJwtWithScope(),
+		internaloption.EnableNewAuthLibrary(),
 		option.WithGRPCDialOption(grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32))),
 	}
@@ -246,11 +249,11 @@ func (c *FunctionClient) DeleteFunctionOperation(name string) *DeleteFunctionOpe
 //	attached, the identity from the credentials would be used, but that
 //	identity does not have permissions to upload files to the URL.
 //
-// When making a HTTP PUT request, these two headers need to be specified:
+// When making a HTTP PUT request, specify this header:
 //
 //	content-type: application/zip
 //
-// And this header SHOULD NOT be specified:
+// Do not specify this header:
 //
 //	Authorization: Bearer YOUR_TOKEN
 func (c *FunctionClient) GenerateUploadUrl(ctx context.Context, req *functionspb.GenerateUploadUrlRequest, opts ...gax.CallOption) (*functionspb.GenerateUploadUrlResponse, error) {
@@ -405,7 +408,9 @@ func (c *functionGRPCClient) Connection() *grpc.ClientConn {
 func (c *functionGRPCClient) setGoogleClientInfo(keyval ...string) {
 	kv := append([]string{"gl-go", gax.GoVersion}, keyval...)
 	kv = append(kv, "gapic", getVersionClient(), "gax", gax.Version, "grpc", grpc.Version)
-	c.xGoogHeaders = []string{"x-goog-api-client", gax.XGoogHeader(kv...)}
+	c.xGoogHeaders = []string{
+		"x-goog-api-client", gax.XGoogHeader(kv...),
+	}
 }
 
 // Close closes the connection to the API service. The user should invoke this when
@@ -473,9 +478,12 @@ func NewFunctionRESTClient(ctx context.Context, opts ...option.ClientOption) (*F
 func defaultFunctionRESTClientOptions() []option.ClientOption {
 	return []option.ClientOption{
 		internaloption.WithDefaultEndpoint("https://cloudfunctions.googleapis.com"),
+		internaloption.WithDefaultEndpointTemplate("https://cloudfunctions.UNIVERSE_DOMAIN"),
 		internaloption.WithDefaultMTLSEndpoint("https://cloudfunctions.mtls.googleapis.com"),
+		internaloption.WithDefaultUniverseDomain("googleapis.com"),
 		internaloption.WithDefaultAudience("https://cloudfunctions.googleapis.com/"),
 		internaloption.WithDefaultScopes(DefaultAuthScopes()...),
+		internaloption.EnableNewAuthLibrary(),
 	}
 }
 
@@ -485,7 +493,9 @@ func defaultFunctionRESTClientOptions() []option.ClientOption {
 func (c *functionRESTClient) setGoogleClientInfo(keyval ...string) {
 	kv := append([]string{"gl-go", gax.GoVersion}, keyval...)
 	kv = append(kv, "gapic", getVersionClient(), "gax", gax.Version, "rest", "UNKNOWN")
-	c.xGoogHeaders = []string{"x-goog-api-client", gax.XGoogHeader(kv...)}
+	c.xGoogHeaders = []string{
+		"x-goog-api-client", gax.XGoogHeader(kv...),
+	}
 }
 
 // Close closes the connection to the API service. The user should invoke this when
@@ -854,6 +864,9 @@ func (c *functionRESTClient) GetFunction(ctx context.Context, req *functionspb.G
 
 	params := url.Values{}
 	params.Add("$alt", "json;enum-encoding=int")
+	if req.GetRevision() != "" {
+		params.Add("revision", fmt.Sprintf("%v", req.GetRevision()))
+	}
 
 	baseUrl.RawQuery = params.Encode()
 
@@ -1236,11 +1249,11 @@ func (c *functionRESTClient) DeleteFunction(ctx context.Context, req *functionsp
 //	attached, the identity from the credentials would be used, but that
 //	identity does not have permissions to upload files to the URL.
 //
-// When making a HTTP PUT request, these two headers need to be specified:
+// When making a HTTP PUT request, specify this header:
 //
 //	content-type: application/zip
 //
-// And this header SHOULD NOT be specified:
+// Do not specify this header:
 //
 //	Authorization: Bearer YOUR_TOKEN
 func (c *functionRESTClient) GenerateUploadUrl(ctx context.Context, req *functionspb.GenerateUploadUrlRequest, opts ...gax.CallOption) (*functionspb.GenerateUploadUrlResponse, error) {

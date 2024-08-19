@@ -25,9 +25,9 @@ import (
 	"sync"
 
 	"cloud.google.com/go/spanner"
+	"cloud.google.com/go/spanner/executor/apiv1/executorpb"
 	"cloud.google.com/go/spanner/test/cloudexecutor/executor/actions"
 	"cloud.google.com/go/spanner/test/cloudexecutor/executor/internal/outputstream"
-	executorpb "cloud.google.com/go/spanner/test/cloudexecutor/proto"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -50,6 +50,10 @@ type CloudStreamHandler struct {
 func (h *CloudStreamHandler) Execute() error {
 	log.Println("ExecuteActionAsync RPC called. Start handling input stream")
 
+	// Enable UseNumberWithJSONDecoderEncoder so that JSON numbers are decoded
+	// as Number (preserving precision) and not float64 (risking loss).
+	spanner.UseNumberWithJSONDecoderEncoder(true)
+
 	var c *actions.ExecutionFlowContext
 	func() {
 		h.mu.Lock()
@@ -70,6 +74,10 @@ func (h *CloudStreamHandler) Execute() error {
 		req, err := h.Stream.Recv()
 		if err == io.EOF {
 			log.Println("Client called Done, half-closed the stream")
+			if h.executionFlowContext != nil && h.executionFlowContext.DbClient != nil {
+				log.Println("Closing the client object in execution flow context")
+				h.executionFlowContext.DbClient.Close()
+			}
 			break
 		}
 		if err != nil {
@@ -235,7 +243,7 @@ func (h *CloudStreamHandler) newActionHandler(action *executorpb.SpannerAction, 
 			OutcomeSender: outcomeSender,
 		}, nil
 	default:
-		return nil, outcomeSender.FinishWithError(status.Error(codes.Unimplemented, fmt.Sprintf("not implemented yet %T", action.GetAction())))
+		return nil, status.Error(codes.Unimplemented, fmt.Sprintf("not implemented yet %T", action.GetAction()))
 	}
 }
 

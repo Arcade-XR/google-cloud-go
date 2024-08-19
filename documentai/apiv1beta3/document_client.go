@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,10 +63,13 @@ type DocumentCallOptions struct {
 func defaultDocumentGRPCClientOptions() []option.ClientOption {
 	return []option.ClientOption{
 		internaloption.WithDefaultEndpoint("documentai.googleapis.com:443"),
+		internaloption.WithDefaultEndpointTemplate("documentai.UNIVERSE_DOMAIN:443"),
 		internaloption.WithDefaultMTLSEndpoint("documentai.mtls.googleapis.com:443"),
+		internaloption.WithDefaultUniverseDomain("googleapis.com"),
 		internaloption.WithDefaultAudience("https://documentai.googleapis.com/"),
 		internaloption.WithDefaultScopes(DefaultAuthScopes()...),
 		internaloption.EnableJwtWithScope(),
+		internaloption.EnableNewAuthLibrary(),
 		option.WithGRPCDialOption(grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32))),
 	}
@@ -169,6 +172,11 @@ func (c *DocumentClient) Connection() *grpc.ClientConn {
 }
 
 // UpdateDataset updates metadata associated with a dataset.
+// Note that this method requires the
+// documentai.googleapis.com/datasets.update permission on the project,
+// which is highly privileged. A user or service account with this permission
+// can create new processors that can interact with any gcs bucket in your
+// project.
 func (c *DocumentClient) UpdateDataset(ctx context.Context, req *documentaipb.UpdateDatasetRequest, opts ...gax.CallOption) (*UpdateDatasetOperation, error) {
 	return c.internalClient.UpdateDataset(ctx, req, opts...)
 }
@@ -331,7 +339,9 @@ func (c *documentGRPCClient) Connection() *grpc.ClientConn {
 func (c *documentGRPCClient) setGoogleClientInfo(keyval ...string) {
 	kv := append([]string{"gl-go", gax.GoVersion}, keyval...)
 	kv = append(kv, "gapic", getVersionClient(), "gax", gax.Version, "grpc", grpc.Version)
-	c.xGoogHeaders = []string{"x-goog-api-client", gax.XGoogHeader(kv...)}
+	c.xGoogHeaders = []string{
+		"x-goog-api-client", gax.XGoogHeader(kv...),
+	}
 }
 
 // Close closes the connection to the API service. The user should invoke this when
@@ -394,9 +404,12 @@ func NewDocumentRESTClient(ctx context.Context, opts ...option.ClientOption) (*D
 func defaultDocumentRESTClientOptions() []option.ClientOption {
 	return []option.ClientOption{
 		internaloption.WithDefaultEndpoint("https://documentai.googleapis.com"),
+		internaloption.WithDefaultEndpointTemplate("https://documentai.UNIVERSE_DOMAIN"),
 		internaloption.WithDefaultMTLSEndpoint("https://documentai.mtls.googleapis.com"),
+		internaloption.WithDefaultUniverseDomain("googleapis.com"),
 		internaloption.WithDefaultAudience("https://documentai.googleapis.com/"),
 		internaloption.WithDefaultScopes(DefaultAuthScopes()...),
+		internaloption.EnableNewAuthLibrary(),
 	}
 }
 
@@ -406,7 +419,9 @@ func defaultDocumentRESTClientOptions() []option.ClientOption {
 func (c *documentRESTClient) setGoogleClientInfo(keyval ...string) {
 	kv := append([]string{"gl-go", gax.GoVersion}, keyval...)
 	kv = append(kv, "gapic", getVersionClient(), "gax", gax.Version, "rest", "UNKNOWN")
-	c.xGoogHeaders = []string{"x-goog-api-client", gax.XGoogHeader(kv...)}
+	c.xGoogHeaders = []string{
+		"x-goog-api-client", gax.XGoogHeader(kv...),
+	}
 }
 
 // Close closes the connection to the API service. The user should invoke this when
@@ -726,6 +741,11 @@ func (c *documentGRPCClient) ListOperations(ctx context.Context, req *longrunnin
 }
 
 // UpdateDataset updates metadata associated with a dataset.
+// Note that this method requires the
+// documentai.googleapis.com/datasets.update permission on the project,
+// which is highly privileged. A user or service account with this permission
+// can create new processors that can interact with any gcs bucket in your
+// project.
 func (c *documentRESTClient) UpdateDataset(ctx context.Context, req *documentaipb.UpdateDatasetRequest, opts ...gax.CallOption) (*UpdateDatasetOperation, error) {
 	m := protojson.MarshalOptions{AllowPartial: true, UseEnumNumbers: true}
 	body := req.GetDataset()

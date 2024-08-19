@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package dialogflow
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -55,6 +56,7 @@ type ParticipantsCallOptions struct {
 	SuggestArticles         []gax.CallOption
 	SuggestFaqAnswers       []gax.CallOption
 	SuggestSmartReplies     []gax.CallOption
+	SuggestKnowledgeAssist  []gax.CallOption
 	ListSuggestions         []gax.CallOption
 	CompileSuggestion       []gax.CallOption
 	GetLocation             []gax.CallOption
@@ -67,10 +69,13 @@ type ParticipantsCallOptions struct {
 func defaultParticipantsGRPCClientOptions() []option.ClientOption {
 	return []option.ClientOption{
 		internaloption.WithDefaultEndpoint("dialogflow.googleapis.com:443"),
+		internaloption.WithDefaultEndpointTemplate("dialogflow.UNIVERSE_DOMAIN:443"),
 		internaloption.WithDefaultMTLSEndpoint("dialogflow.mtls.googleapis.com:443"),
+		internaloption.WithDefaultUniverseDomain("googleapis.com"),
 		internaloption.WithDefaultAudience("https://dialogflow.googleapis.com/"),
 		internaloption.WithDefaultScopes(DefaultAuthScopes()...),
 		internaloption.EnableJwtWithScope(),
+		internaloption.EnableNewAuthLibrary(),
 		option.WithGRPCDialOption(grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32))),
 	}
@@ -164,6 +169,18 @@ func defaultParticipantsCallOptions() *ParticipantsCallOptions {
 			}),
 		},
 		SuggestSmartReplies: []gax.CallOption{
+			gax.WithTimeout(60000 * time.Millisecond),
+			gax.WithRetry(func() gax.Retryer {
+				return gax.OnCodes([]codes.Code{
+					codes.Unavailable,
+				}, gax.Backoff{
+					Initial:    100 * time.Millisecond,
+					Max:        60000 * time.Millisecond,
+					Multiplier: 1.30,
+				})
+			}),
+		},
+		SuggestKnowledgeAssist: []gax.CallOption{
 			gax.WithTimeout(60000 * time.Millisecond),
 			gax.WithRetry(func() gax.Retryer {
 				return gax.OnCodes([]codes.Code{
@@ -300,6 +317,17 @@ func defaultParticipantsRESTCallOptions() *ParticipantsCallOptions {
 					http.StatusServiceUnavailable)
 			}),
 		},
+		SuggestKnowledgeAssist: []gax.CallOption{
+			gax.WithTimeout(60000 * time.Millisecond),
+			gax.WithRetry(func() gax.Retryer {
+				return gax.OnHTTPCodes(gax.Backoff{
+					Initial:    100 * time.Millisecond,
+					Max:        60000 * time.Millisecond,
+					Multiplier: 1.30,
+				},
+					http.StatusServiceUnavailable)
+			}),
+		},
 		ListSuggestions: []gax.CallOption{
 			gax.WithTimeout(60000 * time.Millisecond),
 			gax.WithRetry(func() gax.Retryer {
@@ -344,6 +372,7 @@ type internalParticipantsClient interface {
 	SuggestArticles(context.Context, *dialogflowpb.SuggestArticlesRequest, ...gax.CallOption) (*dialogflowpb.SuggestArticlesResponse, error)
 	SuggestFaqAnswers(context.Context, *dialogflowpb.SuggestFaqAnswersRequest, ...gax.CallOption) (*dialogflowpb.SuggestFaqAnswersResponse, error)
 	SuggestSmartReplies(context.Context, *dialogflowpb.SuggestSmartRepliesRequest, ...gax.CallOption) (*dialogflowpb.SuggestSmartRepliesResponse, error)
+	SuggestKnowledgeAssist(context.Context, *dialogflowpb.SuggestKnowledgeAssistRequest, ...gax.CallOption) (*dialogflowpb.SuggestKnowledgeAssistResponse, error)
 	ListSuggestions(context.Context, *dialogflowpb.ListSuggestionsRequest, ...gax.CallOption) *SuggestionIterator
 	CompileSuggestion(context.Context, *dialogflowpb.CompileSuggestionRequest, ...gax.CallOption) (*dialogflowpb.CompileSuggestionResponse, error)
 	GetLocation(context.Context, *locationpb.GetLocationRequest, ...gax.CallOption) (*locationpb.Location, error)
@@ -463,6 +492,11 @@ func (c *ParticipantsClient) SuggestFaqAnswers(ctx context.Context, req *dialogf
 // messages.
 func (c *ParticipantsClient) SuggestSmartReplies(ctx context.Context, req *dialogflowpb.SuggestSmartRepliesRequest, opts ...gax.CallOption) (*dialogflowpb.SuggestSmartRepliesResponse, error) {
 	return c.internalClient.SuggestSmartReplies(ctx, req, opts...)
+}
+
+// SuggestKnowledgeAssist gets knowledge assist suggestions based on historical messages.
+func (c *ParticipantsClient) SuggestKnowledgeAssist(ctx context.Context, req *dialogflowpb.SuggestKnowledgeAssistRequest, opts ...gax.CallOption) (*dialogflowpb.SuggestKnowledgeAssistResponse, error) {
+	return c.internalClient.SuggestKnowledgeAssist(ctx, req, opts...)
 }
 
 // ListSuggestions deprecated: Use inline suggestion, event based suggestion or
@@ -606,7 +640,9 @@ func (c *participantsGRPCClient) Connection() *grpc.ClientConn {
 func (c *participantsGRPCClient) setGoogleClientInfo(keyval ...string) {
 	kv := append([]string{"gl-go", gax.GoVersion}, keyval...)
 	kv = append(kv, "gapic", getVersionClient(), "gax", gax.Version, "grpc", grpc.Version)
-	c.xGoogHeaders = []string{"x-goog-api-client", gax.XGoogHeader(kv...)}
+	c.xGoogHeaders = []string{
+		"x-goog-api-client", gax.XGoogHeader(kv...),
+	}
 }
 
 // Close closes the connection to the API service. The user should invoke this when
@@ -655,9 +691,12 @@ func NewParticipantsRESTClient(ctx context.Context, opts ...option.ClientOption)
 func defaultParticipantsRESTClientOptions() []option.ClientOption {
 	return []option.ClientOption{
 		internaloption.WithDefaultEndpoint("https://dialogflow.googleapis.com"),
+		internaloption.WithDefaultEndpointTemplate("https://dialogflow.UNIVERSE_DOMAIN"),
 		internaloption.WithDefaultMTLSEndpoint("https://dialogflow.mtls.googleapis.com"),
+		internaloption.WithDefaultUniverseDomain("googleapis.com"),
 		internaloption.WithDefaultAudience("https://dialogflow.googleapis.com/"),
 		internaloption.WithDefaultScopes(DefaultAuthScopes()...),
+		internaloption.EnableNewAuthLibrary(),
 	}
 }
 
@@ -667,7 +706,9 @@ func defaultParticipantsRESTClientOptions() []option.ClientOption {
 func (c *participantsRESTClient) setGoogleClientInfo(keyval ...string) {
 	kv := append([]string{"gl-go", gax.GoVersion}, keyval...)
 	kv = append(kv, "gapic", getVersionClient(), "gax", gax.Version, "rest", "UNKNOWN")
-	c.xGoogHeaders = []string{"x-goog-api-client", gax.XGoogHeader(kv...)}
+	c.xGoogHeaders = []string{
+		"x-goog-api-client", gax.XGoogHeader(kv...),
+	}
 }
 
 // Close closes the connection to the API service. The user should invoke this when
@@ -863,6 +904,24 @@ func (c *participantsGRPCClient) SuggestSmartReplies(ctx context.Context, req *d
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
 		resp, err = c.participantsClient.SuggestSmartReplies(ctx, req, settings.GRPC...)
+		return err
+	}, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (c *participantsGRPCClient) SuggestKnowledgeAssist(ctx context.Context, req *dialogflowpb.SuggestKnowledgeAssistRequest, opts ...gax.CallOption) (*dialogflowpb.SuggestKnowledgeAssistResponse, error) {
+	hds := []string{"x-goog-request-params", fmt.Sprintf("%s=%v", "parent", url.QueryEscape(req.GetParent()))}
+
+	hds = append(c.xGoogHeaders, hds...)
+	ctx = gax.InsertMetadataIntoOutgoingContext(ctx, hds...)
+	opts = append((*c.CallOptions).SuggestKnowledgeAssist[0:len((*c.CallOptions).SuggestKnowledgeAssist):len((*c.CallOptions).SuggestKnowledgeAssist)], opts...)
+	var resp *dialogflowpb.SuggestKnowledgeAssistResponse
+	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
+		var err error
+		resp, err = c.participantsClient.SuggestKnowledgeAssist(ctx, req, settings.GRPC...)
 		return err
 	}, opts...)
 	if err != nil {
@@ -1456,7 +1515,7 @@ func (c *participantsRESTClient) AnalyzeContent(ctx context.Context, req *dialog
 //
 // This method is not supported for the REST transport.
 func (c *participantsRESTClient) StreamingAnalyzeContent(ctx context.Context, opts ...gax.CallOption) (dialogflowpb.Participants_StreamingAnalyzeContentClient, error) {
-	return nil, fmt.Errorf("StreamingAnalyzeContent not yet supported for REST clients")
+	return nil, errors.New("StreamingAnalyzeContent not yet supported for REST clients")
 }
 
 // SuggestArticles gets suggested articles for a participant based on specific historical
@@ -1629,6 +1688,72 @@ func (c *participantsRESTClient) SuggestSmartReplies(ctx context.Context, req *d
 	opts = append((*c.CallOptions).SuggestSmartReplies[0:len((*c.CallOptions).SuggestSmartReplies):len((*c.CallOptions).SuggestSmartReplies)], opts...)
 	unm := protojson.UnmarshalOptions{AllowPartial: true, DiscardUnknown: true}
 	resp := &dialogflowpb.SuggestSmartRepliesResponse{}
+	e := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
+		if settings.Path != "" {
+			baseUrl.Path = settings.Path
+		}
+		httpReq, err := http.NewRequest("POST", baseUrl.String(), bytes.NewReader(jsonReq))
+		if err != nil {
+			return err
+		}
+		httpReq = httpReq.WithContext(ctx)
+		httpReq.Header = headers
+
+		httpRsp, err := c.httpClient.Do(httpReq)
+		if err != nil {
+			return err
+		}
+		defer httpRsp.Body.Close()
+
+		if err = googleapi.CheckResponse(httpRsp); err != nil {
+			return err
+		}
+
+		buf, err := io.ReadAll(httpRsp.Body)
+		if err != nil {
+			return err
+		}
+
+		if err := unm.Unmarshal(buf, resp); err != nil {
+			return err
+		}
+
+		return nil
+	}, opts...)
+	if e != nil {
+		return nil, e
+	}
+	return resp, nil
+}
+
+// SuggestKnowledgeAssist gets knowledge assist suggestions based on historical messages.
+func (c *participantsRESTClient) SuggestKnowledgeAssist(ctx context.Context, req *dialogflowpb.SuggestKnowledgeAssistRequest, opts ...gax.CallOption) (*dialogflowpb.SuggestKnowledgeAssistResponse, error) {
+	m := protojson.MarshalOptions{AllowPartial: true, UseEnumNumbers: true}
+	jsonReq, err := m.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	baseUrl, err := url.Parse(c.endpoint)
+	if err != nil {
+		return nil, err
+	}
+	baseUrl.Path += fmt.Sprintf("/v2beta1/%v/suggestions:suggestKnowledgeAssist", req.GetParent())
+
+	params := url.Values{}
+	params.Add("$alt", "json;enum-encoding=int")
+
+	baseUrl.RawQuery = params.Encode()
+
+	// Build HTTP headers from client and context metadata.
+	hds := []string{"x-goog-request-params", fmt.Sprintf("%s=%v", "parent", url.QueryEscape(req.GetParent()))}
+
+	hds = append(c.xGoogHeaders, hds...)
+	hds = append(hds, "Content-Type", "application/json")
+	headers := gax.BuildHeaders(ctx, hds...)
+	opts = append((*c.CallOptions).SuggestKnowledgeAssist[0:len((*c.CallOptions).SuggestKnowledgeAssist):len((*c.CallOptions).SuggestKnowledgeAssist)], opts...)
+	unm := protojson.UnmarshalOptions{AllowPartial: true, DiscardUnknown: true}
+	resp := &dialogflowpb.SuggestKnowledgeAssistResponse{}
 	e := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		if settings.Path != "" {
 			baseUrl.Path = settings.Path
