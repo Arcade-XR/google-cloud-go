@@ -17,6 +17,7 @@ package firestore
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"cloud.google.com/go/functions/metadata"
@@ -85,17 +86,32 @@ func (c *Client) NewSnapshotFromValue(ctx context.Context, value FirestoreValue)
 		return nil, err
 	}
 
-	return c.NewSnapshotFromDoc(ctx, proto)
-}
-
-func (c *Client) NewSnapshotFromDoc(ctx context.Context, doc *pb.Document) (*DocumentSnapshot, error) {
-	name := doc.GetName()
+	name := proto.Name
 	if name == "" {
 		meta, err := metadata.FromContext(ctx)
 		if err != nil {
 			return nil, err
 		}
 		name = meta.Resource.RawPath
+	}
+
+	docRef, err := pathToDoc(name, c)
+	if err != nil {
+		return nil, err
+	}
+
+	readTime := proto.UpdateTime
+	if proto.Fields == nil {
+		proto = nil
+	}
+
+	return newDocumentSnapshot(docRef, proto, c, readTime)
+}
+
+func (c *Client) NewSnapshotFromDoc(ctx context.Context, doc *pb.Document) (*DocumentSnapshot, error) {
+	name := doc.GetName()
+	if name == "" {
+		return nil, fmt.Errorf("name can't be nil")
 	}
 
 	docRef, err := pathToDoc(name, c)
