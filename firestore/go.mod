@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	cloud.google.com/go v0.115.0
+	cloud.google.com/go/functions v1.16.6
 	cloud.google.com/go/longrunning v0.5.11
 	github.com/google/go-cmp v0.6.0
 	github.com/googleapis/gax-go/v2 v2.13.0
