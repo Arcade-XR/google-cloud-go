@@ -5,6 +5,7 @@ go 1.22
 require (
 	cloud.google.com/go v0.117.0
 	cloud.google.com/go/longrunning v0.6.2
+	cloud.google.com/go/functions v1.16.6
 	github.com/google/go-cmp v0.6.0
 	github.com/googleapis/gax-go/v2 v2.14.0
 	golang.org/x/time v0.8.0

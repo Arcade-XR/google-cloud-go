@@ -45,6 +45,7 @@ type FirestoreValue struct {
 NewSnapshotFromValue converts a FirestoreValue to a DocumentSnapshot.
 
 Example:
+
 	var client *firestore.Client
 
 	type Model = struct {
@@ -99,10 +100,22 @@ func (c *Client) NewSnapshotFromValue(ctx context.Context, value FirestoreValue)
 	}
 
 	readTime := proto.UpdateTime
-
 	if proto.Fields == nil {
 		proto = nil
 	}
 
 	return newDocumentSnapshot(docRef, proto, c, readTime)
+}
+
+func (c *Client) NewSnapshotFromDoc(ctx context.Context, docPath string, doc *pb.Document) (*DocumentSnapshot, error) {
+	docRef, err := pathToDoc(docPath, c)
+	if err != nil {
+		return nil, err
+	}
+	readTime := doc.GetUpdateTime()
+	if doc.GetFields() == nil {
+		doc = nil
+	}
+
+	return newDocumentSnapshot(docRef, doc, c, readTime)
 }
