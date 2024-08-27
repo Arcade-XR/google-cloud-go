@@ -85,26 +85,7 @@ func (c *Client) NewSnapshotFromValue(ctx context.Context, value FirestoreValue)
 		return nil, err
 	}
 
-	name := proto.Name
-	if name == "" {
-		meta, err := metadata.FromContext(ctx)
-		if err != nil {
-			return nil, err
-		}
-		name = meta.Resource.RawPath
-	}
-
-	docRef, err := pathToDoc(name, c)
-	if err != nil {
-		return nil, err
-	}
-
-	readTime := proto.UpdateTime
-	if proto.Fields == nil {
-		proto = nil
-	}
-
-	return newDocumentSnapshot(docRef, proto, c, readTime)
+	return c.NewSnapshotFromDoc(ctx, proto)
 }
 
 func (c *Client) NewSnapshotFromDoc(ctx context.Context, doc *pb.Document) (*DocumentSnapshot, error) {
